@@ -17,7 +17,7 @@ class SeedDump
 
           # Loop through the records of the current batch
           records.offset((batch_number - 1) * batch_size).limit(batch_size).each do |record|
-            record_strings << dump_record(record)
+            record_strings << dump_record(record, options)
           end
 
           yield record_strings, batch_number, last_batch_number
@@ -32,7 +32,7 @@ class SeedDump
         batch_number = 1
 
         records.each_with_index do |record, i|
-          record_strings << dump_record(record)
+          record_strings << dump_record(record, options)
 
           if (record_strings.length == batch_size) || (i == records.length - 1)
             yield record_strings, batch_number, last_batch_number
@@ -44,19 +44,29 @@ class SeedDump
       end
 
       def batch_params_from(records, options)
-        batch_size = batch_size_from(options)
+        batch_size = batch_size_from(records, options)
 
-        last_batch_number = (records.count.to_f / batch_size).ceil
+        last_batch_number = ((have_limit_set?(records) ? records.arel.limit : records.count).to_f / batch_size).ceil
 
         [batch_size, last_batch_number]
       end
 
-      def batch_size_from(options)
-        if options[:batch_size].present?
-          options[:batch_size].to_i
-        else
-          1000
+      def batch_size_from(records, options)
+        batch_size = if options[:batch_size].present?
+                       options[:batch_size].to_i
+                     else
+                       1000
+                     end
+
+        if have_limit_set?(records)
+          batch_size = [records.arel.limit, batch_size].min
         end
+
+        batch_size
+      end
+
+      def have_limit_set?(records)
+        records.respond_to?(:arel) && records.arel.limit.present?
       end
     end
   end

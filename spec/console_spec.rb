@@ -20,13 +20,26 @@ describe SeedDump do
     end
 
     context 'with file option' do
+      before do
+        @filename = Dir::Tmpname.make_tmpname(File.join(Dir.tmpdir, 'foo'), nil)
+      end
+
+      after do
+        File.unlink(@filename)
+      end
+
       it 'should dump the models to the specified file' do
-        filename = Dir::Tmpname.make_tmpname(File.join(Dir.tmpdir, 'foo'), nil)
+        SeedDump.dump(Sample, file: @filename)
 
-        SeedDump.dump(Sample, file: filename)
+        File.open(@filename) { |file| file.read.should eq(@expected_output) }
+      end
 
-        File.open(filename) do |file|
-          file.read.should eq(@expected_output)
+      context 'with append option' do
+        it 'should append to the file rather than overwriting it' do
+          SeedDump.dump(Sample, file: @filename)
+          SeedDump.dump(Sample, file: @filename, append: true)
+
+          File.open(@filename) { |file| file.read.should eq(@expected_output + @expected_output) }
         end
       end
     end
@@ -49,6 +62,14 @@ describe SeedDump do
       end
     end
 
+    context 'with a limit parameter' do
+      it 'should dump the number of models specified by the limit' do
+        expected_output = "Sample.create!([{string: \"string\", text: \"text\", integer: 42, float: 3.14, decimal: \"2.72\", datetime: \"1776-07-04 19:14:00\", time: \"2000-01-01 03:15:00\", date: \"1863-11-19\", binary: \"binary\", boolean: false}])\n"
+
+        SeedDump.dump(Sample.limit(1)).should eq(expected_output)
+      end
+    end
+
     context 'with a batch_size parameter' do
       it 'should not raise an exception' do
 
@@ -63,6 +84,23 @@ describe SeedDump do
 
       it 'should return nil if the array is empty' do
         SeedDump.dump([]).should be(nil)
+      end
+    end
+
+    context 'with an exclude_attributes parameter' do
+      it 'should exclude the specified attributes from the dump' do
+        expected_output = "Sample.create!([{text: \"text\", integer: 42, decimal: \"2.72\", time: \"2000-01-01 03:15:00\", date: \"1863-11-19\", binary: \"binary\", boolean: false},\n                {text: \"text\", integer: 42, decimal: \"2.72\", time: \"2000-01-01 03:15:00\", date: \"1863-11-19\", binary: \"binary\", boolean: false},\n                {text: \"text\", integer: 42, decimal: \"2.72\", time: \"2000-01-01 03:15:00\", date: \"1863-11-19\", binary: \"binary\", boolean: false}])\n"
+
+        SeedDump.dump(Sample, exclude_attributes: [:id, :created_at, :updated_at,
+                                                   :string, :float, :datetime]).should eq(expected_output)
+      end
+    end
+
+    context 'with :create_method option' do
+      it 'should use the specified create method' do
+        expected_output = "Sample.create([{string: \"string\", text: \"text\", integer: 42, float: 3.14, decimal: \"2.72\", datetime: \"1776-07-04 19:14:00\", time: \"2000-01-01 03:15:00\", date: \"1863-11-19\", binary: \"binary\", boolean: false},\n                {string: \"string\", text: \"text\", integer: 42, float: 3.14, decimal: \"2.72\", datetime: \"1776-07-04 19:14:00\", time: \"2000-01-01 03:15:00\", date: \"1863-11-19\", binary: \"binary\", boolean: false},\n                {string: \"string\", text: \"text\", integer: 42, float: 3.14, decimal: \"2.72\", datetime: \"1776-07-04 19:14:00\", time: \"2000-01-01 03:15:00\", date: \"1863-11-19\", binary: \"binary\", boolean: false}])\n"
+
+        SeedDump.dump(Sample, create_method: 'create').should eq(expected_output)
       end
     end
   end
