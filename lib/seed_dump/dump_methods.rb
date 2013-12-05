@@ -125,7 +125,7 @@ class SeedDump
       elsif value.is_a?(Date) || value.is_a?(Time)
         %("#{value.to_s(:db)}")
       elsif defined?(UUIDTools::UUID)=='constant' && value.is_a?(UUIDTools::UUID)
-        "#{value.to_param}"
+        "UUIDTools::UUID.serialize('#{value.to_param}')"
       else
         value.inspect
       end
