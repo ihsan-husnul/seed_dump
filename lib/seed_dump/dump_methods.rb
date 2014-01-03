@@ -17,7 +17,7 @@ class SeedDump
       # config
       @opts['verbose'] = env["VERBOSE"].true? || env['VERBOSE'].nil?
       @opts['debug'] = env["DEBUG"].true?
-      @opts['exclude'] = env['EXCLUDE'].nil? ? ['id', 'created_at', 'updated_at'] : env['EXCLUDE'].split(',').map {|x| x.strip}
+      @opts['exclude'] = env['EXCLUDE'].nil? ? ['created_at', 'updated_at'] : env['EXCLUDE'].split(',').map {|x| x.strip}
       @opts['models']  = env['MODELS'] || env['MODEL'] || ""
       @opts['file']    = env['FILE'] || "#{Rails.root}/db/seeds.rb"
       @opts['append']  = (env['APPEND'].true? && File.exists?(@opts['file']) )
